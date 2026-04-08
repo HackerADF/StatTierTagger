@@ -4,6 +4,10 @@ A Fabric client-side mod that displays PvP tier rankings directly in player name
 
 **Note:** This mod requires [UkuLib](https://modrinth.com/mod/ukulib) to function.
 
+## Download
+
+Grab the latest jar from the [Releases](https://github.com/HackerADF/StatTierTagger/releases) page. Drop it into your Fabric `mods/` folder alongside Fabric API and UkuLib.
+
 ## What it does
 
 StatTier pulls tier data from a custom leaderboard API and shows each player's ranking next to their name — both above their head and in the tab player list. It supports multiple game modes including Sword, Crystal, Nethpot, Diapot, SMP, Mace, Axe, and UHC.
