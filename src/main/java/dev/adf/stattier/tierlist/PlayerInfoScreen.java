@@ -4,97 +4,109 @@ import dev.adf.stattier.TierCache;
 import dev.adf.stattier.TierTagger;
 import dev.adf.stattier.model.GameMode;
 import dev.adf.stattier.model.PlayerInfo;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Map;
-import net.minecraft.class_124;
-import net.minecraft.class_2561;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_4185;
-import net.minecraft.class_437;
-import net.minecraft.class_5244;
-import net.minecraft.class_7842;
-import net.minecraft.class_8765;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.PlayerSkinWidget;
+import net.minecraft.client.gui.widget.TextWidget;
+import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.uku3lig.ukulib.config.screen.CloseableScreen;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Locale;
+import java.util.Map;
+
 public class PlayerInfoScreen extends CloseableScreen {
-   private static final Map<String, Integer> REGION_COLORS = Map.of("NA", 16738926, "EU", 7012206, "SA", 16750848, "AU", 16167531, "ME", 16767334, "AS", 12745632, "AF", 6770343);
-   private final PlayerInfo info;
-   private final class_8765 skin;
+    private static final Map<String, Integer> REGION_COLORS = Map.of(
+            "NA", 0xff6a6e, "EU", 0x6aff6e, "SA", 0xff9900,
+            "AU", 0xf6b26b, "ME", 0xffd966, "AS", 0xc27ba0, "AF", 0x674ea7
+    );
 
-   public PlayerInfoScreen(class_437 parent, PlayerInfo info, class_8765 skin) {
-      super(class_2561.method_30163("Player Info"), parent);
-      this.info = info;
-      this.skin = skin;
-   }
+    private final PlayerInfo info;
+    private final PlayerSkinWidget skin;
 
-   protected void method_25426() {
-      this.method_37063(class_4185.method_46430(class_5244.field_24334, (button) -> {
-         class_310.method_1551().method_1507(this.parent);
-      }).method_46434(this.field_22789 / 2 - 100, this.field_22790 - 27, 200, 20).method_46431());
-      this.method_37063(this.skin);
-      int rankingHeight = this.info.rankings().size() * 11;
-      int rank = TierCache.getPlayerRank(this.info.name());
-      int infoHeight = rank > 0 ? 60 : 45;
-      int startY = (this.field_22790 - infoHeight - rankingHeight) / 2;
-      int rankingY = startY + infoHeight;
-      Iterator var5 = this.info.getSortedTiers().iterator();
+    public PlayerInfoScreen(Screen parent, PlayerInfo info, PlayerSkinWidget skin) {
+        super(Text.of("Player Info"), parent);
+        this.info = info;
+        this.skin = skin;
+    }
 
-      while(var5.hasNext()) {
-         PlayerInfo.NamedRanking namedRanking = (PlayerInfo.NamedRanking)var5.next();
-         if (namedRanking.mode() != null) {
-            class_7842 text = new class_7842(this.formatTier(namedRanking.mode(), namedRanking.ranking()), this.field_22793);
-            text.method_46421(this.field_22789 / 2 + 5);
-            text.method_46419(rankingY);
-            this.method_37063(text);
+    @Override
+    protected void init() {
+        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> MinecraftClient.getInstance().setScreen(parent))
+                .dimensions(this.width / 2 - 100, this.height - 27, 200, 20)
+                .build());
+
+        this.addDrawableChild(this.skin);
+
+        int rankingHeight = this.info.rankings().size() * 11;
+        int rank = TierCache.getPlayerRank(this.info.name());
+        int infoHeight = rank > 0 ? 60 : 45;
+        int startY = (this.height - infoHeight - rankingHeight) / 2;
+        int rankingY = startY + infoHeight;
+
+        for (PlayerInfo.NamedRanking namedRanking : this.info.getSortedTiers()) {
+            if (namedRanking.mode() == null) continue;
+
+            TextWidget text = new TextWidget(formatTier(namedRanking.mode(), namedRanking.ranking()), this.textRenderer);
+            text.setX(this.width / 2 + 5);
+            text.setY(rankingY);
+            this.addDrawableChild(text);
             rankingY += 11;
-         }
-      }
+        }
+    }
 
-   }
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        super.render(context, mouseX, mouseY, delta);
 
-   public void method_25394(class_332 context, int mouseX, int mouseY, float delta) {
-      super.method_25394(context, mouseX, mouseY, delta);
-      context.method_25300(this.field_22793, this.info.name() + "'s profile", this.field_22789 / 2, 20, -1);
-      int rankingHeight = this.info.rankings().size() * 11;
-      int rank = TierCache.getPlayerRank(this.info.name());
-      int infoHeight = rank > 0 ? 60 : 45;
-      int startY = (this.field_22790 - infoHeight - rankingHeight) / 2;
-      context.method_27535(this.field_22793, this.getRegionText(this.info), this.field_22789 / 2 + 5, startY, -1);
-      context.method_27535(this.field_22793, this.getTitleText(this.info), this.field_22789 / 2 + 5, startY + 15, -1);
-      if (rank > 0) {
-         context.method_27535(this.field_22793, this.getRankText(rank), this.field_22789 / 2 + 5, startY + 30, -1);
-         context.method_25303(this.field_22793, "Rankings:", this.field_22789 / 2 + 5, startY + 45, -1);
-      } else {
-         context.method_25303(this.field_22793, "Rankings:", this.field_22789 / 2 + 5, startY + 30, -1);
-      }
-   }
+        context.drawCenteredTextWithShadow(this.textRenderer, this.info.name() + "'s profile", this.width / 2, 20, 0xFFFFFFFF);
 
-   private class_2561 formatTier(@NotNull GameMode gamemode, PlayerInfo.Ranking ranking) {
-      class_2561 tierText = TierTagger.getRankingText(ranking, false);
-      return class_2561.method_43473().method_10852(gamemode.asStyled(true)).method_10852(class_2561.method_43470(": ").method_27692(class_124.field_1080)).method_10852(tierText);
-   }
+        int rankingHeight = this.info.rankings().size() * 11;
+        int rank = TierCache.getPlayerRank(this.info.name());
+        int infoHeight = rank > 0 ? 60 : 45;
+        int startY = (this.height - infoHeight - rankingHeight) / 2;
 
-   private class_2561 getTitleText(PlayerInfo info) {
-      PlayerInfo.PointInfo pointInfo = info.getPointInfo();
-      return class_2561.method_43473().method_10852(class_2561.method_43470(pointInfo.getTitle()).method_27694((s) -> {
-         return s.method_36139(pointInfo.getColor());
-      })).method_10852(class_2561.method_43470(" (" + info.getTotalPoints() + " pts)").method_27692(class_124.field_1080));
-   }
+        context.drawTextWithShadow(this.textRenderer, getRegionText(this.info), this.width / 2 + 5, startY, 0xFFFFFFFF);
+        context.drawTextWithShadow(this.textRenderer, getTitleText(this.info), this.width / 2 + 5, startY + 15, 0xFFFFFFFF);
 
-   private class_2561 getRankText(int rank) {
-      int rankColor = TierTagger.getRankColor(rank);
-      return class_2561.method_43473().method_10852(class_2561.method_43470("Rank: ").method_27692(class_124.field_1080)).method_10852(class_2561.method_43470("#" + rank).method_27694((s) -> {
-         return s.method_36139(rankColor);
-      }));
-   }
+        if (rank > 0) {
+            context.drawTextWithShadow(this.textRenderer, getRankText(rank), this.width / 2 + 5, startY + 30, 0xFFFFFFFF);
+            context.drawTextWithShadow(this.textRenderer, "Rankings:", this.width / 2 + 5, startY + 45, 0xFFFFFFFF);
+        } else {
+            context.drawTextWithShadow(this.textRenderer, "Rankings:", this.width / 2 + 5, startY + 30, 0xFFFFFFFF);
+        }
+    }
 
-   private class_2561 getRegionText(PlayerInfo info) {
-      int color = (Integer)REGION_COLORS.getOrDefault(info.region().toUpperCase(Locale.ROOT), 16777215);
-      return class_2561.method_43473().method_10852(class_2561.method_43470("Region: ")).method_10852(class_2561.method_43470(info.region()).method_27694((s) -> {
-         return s.method_36139(color);
-      }));
-   }
+    private Text formatTier(@NotNull GameMode gamemode, PlayerInfo.Ranking ranking) {
+        Text tierText = TierTagger.getRankingText(ranking, false);
+        return Text.empty()
+                .append(gamemode.asStyled(true))
+                .append(Text.literal(": ").formatted(Formatting.GRAY))
+                .append(tierText);
+    }
+
+    private Text getTitleText(PlayerInfo info) {
+        PlayerInfo.PointInfo pointInfo = info.getPointInfo();
+        return Text.empty()
+                .append(Text.literal(pointInfo.getTitle()).styled(s -> s.withColor(pointInfo.getColor())))
+                .append(Text.literal(" (" + info.getTotalPoints() + " pts)").formatted(Formatting.GRAY));
+    }
+
+    private Text getRankText(int rank) {
+        int rankColor = TierTagger.getRankColor(rank);
+        return Text.empty()
+                .append(Text.literal("Rank: ").formatted(Formatting.GRAY))
+                .append(Text.literal("#" + rank).styled(s -> s.withColor(rankColor)));
+    }
+
+    private Text getRegionText(PlayerInfo info) {
+        int color = REGION_COLORS.getOrDefault(info.region().toUpperCase(Locale.ROOT), 0xffffff);
+        return Text.empty()
+                .append(Text.literal("Region: "))
+                .append(Text.literal(info.region()).styled(s -> s.withColor(color)));
+    }
 }

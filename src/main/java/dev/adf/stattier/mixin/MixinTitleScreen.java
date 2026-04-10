@@ -1,13 +1,13 @@
 package dev.adf.stattier.mixin;
 
-import net.minecraft.class_2561;
-import net.minecraft.class_437;
-import net.minecraft.class_442;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.TitleScreen;
+import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 
-@Mixin({class_442.class})
-public class MixinTitleScreen extends class_437 {
-   protected MixinTitleScreen(class_2561 title) {
-      super(title);
-   }
+@Mixin(TitleScreen.class)
+public class MixinTitleScreen extends Screen {
+    protected MixinTitleScreen(Text title) {
+        super(title);
+    }
 }
