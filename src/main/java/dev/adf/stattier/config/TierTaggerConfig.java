@@ -3,168 +3,80 @@ package dev.adf.stattier.config;
 import com.google.gson.internal.LinkedTreeMap;
 import dev.adf.stattier.TierCache;
 import dev.adf.stattier.model.GameMode;
-import java.io.Serializable;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import net.minecraft.util.TranslatableOption;
+import net.minecraft.util.function.ValueLists;
+import net.uku3lig.ukulib.config.IConfig;
+
 import java.util.Optional;
-import net.minecraft.class_7291;
+import java.util.function.IntFunction;
 
-public class TierTaggerConfig implements Serializable {
-   private boolean enabled = true;
-   private String gameMode = "sword";
-   private boolean showRetired = true;
-   private TierTaggerConfig.HighestMode highestMode;
-   private boolean showIcons;
-   private boolean playerList;
-   private int retiredColor;
-   private LinkedTreeMap<String, Integer> tierColors;
-   private String apiUrl;
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class TierTaggerConfig implements IConfig<TierTaggerConfig> {
+    private boolean enabled = true;
+    private String gameMode = "sword";
+    private boolean showRetired = true;
+    private HighestMode highestMode = HighestMode.NOT_FOUND;
+    private boolean showIcons = true;
+    private boolean playerList = true;
+    private int retiredColor = 0xa2d6ff;
+    private LinkedTreeMap<String, Integer> tierColors = defaultColors();
+    private String apiUrl = "https://shrill-mode-ce7d.urbruh122.workers.dev";
 
-   public GameMode getGameMode() {
-      Optional<GameMode> opt = TierCache.findMode(this.gameMode);
-      if (opt.isPresent()) {
-         return (GameMode)opt.get();
-      } else {
-         GameMode first = (GameMode)TierCache.getGamemodes().getFirst();
-         if (!first.isNone()) {
-            this.gameMode = first.id();
-         }
+    @Override
+    public TierTaggerConfig defaultConfig() {
+        return new TierTaggerConfig();
+    }
 
-         return first;
-      }
-   }
+    public GameMode getGameMode() {
+        Optional<GameMode> opt = TierCache.findMode(this.gameMode);
+        if (opt.isPresent()) {
+            return opt.get();
+        } else {
+            GameMode first = TierCache.getGamemodes().get(0);
+            if (!first.isNone()) this.gameMode = first.id();
+            return first;
+        }
+    }
 
-   private static LinkedTreeMap<String, Integer> defaultColors() {
-      LinkedTreeMap<String, Integer> colors = new LinkedTreeMap();
-      colors.put("HT1", 15252026);
-      colors.put("LT1", 14005077);
-      colors.put("HT2", 12899303);
-      colors.put("LT2", 10528690);
-      colors.put("HT3", 16293722);
-      colors.put("LT3", 13007682);
-      colors.put("HT4", 8483994);
-      colors.put("LT4", 6642553);
-      colors.put("HT5", 9405096);
-      colors.put("LT5", 6642553);
-      return colors;
-   }
+    private static LinkedTreeMap<String, Integer> defaultColors() {
+        LinkedTreeMap<String, Integer> colors = new LinkedTreeMap<>();
+        colors.put("HT1", 0xe8ba3a);
+        colors.put("LT1", 0xd5b355);
+        colors.put("HT2", 0xc4d3e7);
+        colors.put("LT2", 0xa0a7b2);
+        colors.put("HT3", 0xf89f5a);
+        colors.put("LT3", 0xc67b42);
+        colors.put("HT4", 0x81749a);
+        colors.put("LT4", 0x655b79);
+        colors.put("HT5", 0x8f82a8);
+        colors.put("LT5", 0x655b79);
+        return colors;
+    }
 
-public boolean isEnabled() {
-      return this.enabled;
-   }
+    @Getter
+    @AllArgsConstructor
+    public enum HighestMode implements TranslatableOption {
+        NEVER(0, "stattier.highest.never"),
+        NOT_FOUND(1, "stattier.highest.not_found"),
+        ALWAYS(2, "stattier.highest.always"),
+        ;
 
-public boolean isShowRetired() {
-      return this.showRetired;
-   }
+        private final int id;
+        private final String translationKey;
 
-public TierTaggerConfig.HighestMode getHighestMode() {
-      return this.highestMode;
-   }
+        private static final IntFunction<HighestMode> BY_ID = ValueLists.createIdToValueFunction(
+                HighestMode::getId, values(), ValueLists.OutOfBoundsHandling.WRAP
+        );
 
-public boolean isShowIcons() {
-      return this.showIcons;
-   }
-
-public boolean isPlayerList() {
-      return this.playerList;
-   }
-
-public int getRetiredColor() {
-      return this.retiredColor;
-   }
-
-public LinkedTreeMap<String, Integer> getTierColors() {
-      return this.tierColors;
-   }
-
-public String getApiUrl() {
-      return this.apiUrl;
-   }
-
-public void setEnabled(boolean enabled) {
-      this.enabled = enabled;
-   }
-
-public void setGameMode(String gameMode) {
-      this.gameMode = gameMode;
-   }
-
-public void setShowRetired(boolean showRetired) {
-      this.showRetired = showRetired;
-   }
-
-public void setHighestMode(TierTaggerConfig.HighestMode highestMode) {
-      this.highestMode = highestMode;
-   }
-
-public void setShowIcons(boolean showIcons) {
-      this.showIcons = showIcons;
-   }
-
-public void setPlayerList(boolean playerList) {
-      this.playerList = playerList;
-   }
-
-public void setRetiredColor(int retiredColor) {
-      this.retiredColor = retiredColor;
-   }
-
-public void setTierColors(LinkedTreeMap<String, Integer> tierColors) {
-      this.tierColors = tierColors;
-   }
-
-public void setApiUrl(String apiUrl) {
-      this.apiUrl = apiUrl;
-   }
-
-public TierTaggerConfig() {
-      this.highestMode = TierTaggerConfig.HighestMode.NOT_FOUND;
-      this.showIcons = true;
-      this.playerList = true;
-      this.retiredColor = 10671871;
-      this.tierColors = defaultColors();
-      this.apiUrl = "https://shrill-mode-ce7d.urbruh122.workers.dev";
-   }
-
-public TierTaggerConfig(boolean enabled, String gameMode, boolean showRetired, TierTaggerConfig.HighestMode highestMode, boolean showIcons, boolean playerList, int retiredColor, LinkedTreeMap<String, Integer> tierColors, String apiUrl) {
-      this.highestMode = TierTaggerConfig.HighestMode.NOT_FOUND;
-      this.showIcons = true;
-      this.playerList = true;
-      this.retiredColor = 10671871;
-      this.tierColors = defaultColors();
-      this.apiUrl = "https://shrill-mode-ce7d.urbruh122.workers.dev";
-      this.enabled = enabled;
-      this.gameMode = gameMode;
-      this.showRetired = showRetired;
-      this.highestMode = highestMode;
-      this.showIcons = showIcons;
-      this.playerList = playerList;
-      this.retiredColor = retiredColor;
-      this.tierColors = tierColors;
-      this.apiUrl = apiUrl;
-   }
-
-   public static enum HighestMode implements class_7291 {
-      NEVER(0, "stattier.highest.never"),
-      NOT_FOUND(1, "stattier.highest.not_found"),
-      ALWAYS(2, "stattier.highest.always");
-
-      private final int id;
-      private final String translationKey;
-
-      public int method_7362() {
-         return this.id;
-      }
-
-      public String method_7359() {
-         return this.translationKey;
-      }
-
-      private HighestMode(final int id, final String translationKey) {
-         this.id = id;
-         this.translationKey = translationKey;
-      }
-
-      private static TierTaggerConfig.HighestMode[] $values() {
-         return new TierTaggerConfig.HighestMode[]{NEVER, NOT_FOUND, ALWAYS};
-      }
-   }
+        public static HighestMode byId(int id) {
+            return BY_ID.apply(id);
+        }
+    }
 }
