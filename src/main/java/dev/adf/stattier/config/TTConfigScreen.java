@@ -4,93 +4,69 @@ import dev.adf.stattier.TierCache;
 import dev.adf.stattier.TierTagger;
 import dev.adf.stattier.model.GameMode;
 import dev.adf.stattier.tierlist.PlayerSearchScreen;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
-import net.minecraft.class_2561;
-import net.minecraft.class_437;
-import net.minecraft.class_7172;
-import net.minecraft.class_7919;
-import net.minecraft.class_8087;
-import net.uku3lig.ukulib.config.option.ColorOption;
-import net.uku3lig.ukulib.config.option.CyclingOption;
-import net.uku3lig.ukulib.config.option.ScreenOpenButton;
-import net.uku3lig.ukulib.config.option.SimpleButton;
-import net.uku3lig.ukulib.config.option.WidgetCreator;
+import net.minecraft.client.OptionInstance;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.tabs.Tab;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.uku3lig.ukulib.config.option.*;
 import net.uku3lig.ukulib.config.option.widget.ButtonTab;
 import net.uku3lig.ukulib.config.screen.TabbedConfigScreen;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 public class TTConfigScreen extends TabbedConfigScreen<TierTaggerConfig> {
-   public TTConfigScreen(class_437 parent) {
-      super("StatTier Config", parent, TierTagger.getManager());
-   }
+    public TTConfigScreen(Screen parent) {
+        super("StatTier Config", parent, TierTagger.getManager());
+    }
 
-   protected class_8087[] getTabs(TierTaggerConfig config) {
-      return new class_8087[]{new TTConfigScreen.MainSettingsTab(this), new TTConfigScreen.ColorsTab(this)};
-   }
+    @Override
+    protected Tab[] getTabs(TierTaggerConfig config) {
+        return new Tab[]{new MainSettingsTab(), new ColorsTab()};
+    }
 
-   public class MainSettingsTab extends ButtonTab<TierTaggerConfig> {
-      public MainSettingsTab(final TTConfigScreen this$0) {
-         super("stattier.config", this$0.manager);
-      }
+    public class MainSettingsTab extends ButtonTab<TierTaggerConfig> {
+        public MainSettingsTab() {
+            super("stattier.config", TTConfigScreen.this.manager);
+        }
 
-      protected WidgetCreator[] getWidgets(TierTaggerConfig config) {
-         WidgetCreator[] var10000 = new WidgetCreator[8];
-         boolean var10004 = config.isEnabled();
-         Objects.requireNonNull(config);
-         var10000[0] = CyclingOption.ofBoolean("stattier.config.enabled", var10004, config::setEnabled);
-         var10000[1] = new CyclingOption<>("stattier.config.gamemode", TierCache.getGamemodes(), config.getGameMode(), (GameMode m) -> {
-            config.setGameMode(m.id());
-         }, (GameMode m) -> {
-            return class_2561.method_43470(m.title());
-         }, (GameMode m) -> {
-            return m.isNone() ? class_7919.method_47407(class_2561.method_43471("stattier.config.gamemode.none")) : null;
-         });
-         var10004 = config.isShowRetired();
-         Objects.requireNonNull(config);
-         var10000[2] = CyclingOption.ofBoolean("stattier.config.retired", var10004, config::setShowRetired);
-         TierTaggerConfig.HighestMode var10005 = config.getHighestMode();
-         Objects.requireNonNull(config);
-         var10000[3] = CyclingOption.ofTranslatableEnum("stattier.config.highest", TierTaggerConfig.HighestMode.class, var10005, config::setHighestMode, class_7172.method_42717(class_2561.method_43471("stattier.config.highest.desc")));
-         var10004 = config.isShowIcons();
-         Objects.requireNonNull(config);
-         var10000[4] = CyclingOption.ofBoolean("stattier.config.icons", var10004, config::setShowIcons);
-         var10004 = config.isPlayerList();
-         Objects.requireNonNull(config);
-         var10000[5] = CyclingOption.ofBoolean("stattier.config.playerList", var10004, config::setPlayerList);
-         var10000[6] = new SimpleButton("stattier.clear", (b) -> {
-            TierCache.clearCache();
-         });
-         var10000[7] = new ScreenOpenButton("stattier.config.search", PlayerSearchScreen::new);
-         return var10000;
-      }
-   }
+        @Override
+        protected WidgetCreator[] getWidgets(TierTaggerConfig config) {
+            return new WidgetCreator[]{
+                    CyclingOption.ofBoolean("stattier.config.enabled", config.isEnabled(), config::setEnabled),
+                    new CyclingOption<>("stattier.config.gamemode", TierCache.getGamemodes(), config.getGameMode(),
+                            (GameMode m) -> config.setGameMode(m.id()),
+                            (GameMode m) -> Component.literal(m.title()),
+                            (GameMode m) -> m.isNone() ? Tooltip.create(Component.translatable("stattier.config.gamemode.none")) : null),
+                    CyclingOption.ofBoolean("stattier.config.retired", config.isShowRetired(), config::setShowRetired),
+                    CyclingOption.ofTranslatableEnum("stattier.config.highest", TierTaggerConfig.HighestMode.class, config.getHighestMode(), config::setHighestMode, OptionInstance.cachedConstantTooltip(Component.translatable("stattier.config.highest.desc"))),
+                    CyclingOption.ofBoolean("stattier.config.icons", config.isShowIcons(), config::setShowIcons),
+                    CyclingOption.ofBoolean("stattier.config.playerList", config.isPlayerList(), config::setPlayerList),
+                    new SimpleButton("stattier.clear", b -> TierCache.clearCache()),
+                    new ScreenOpenButton("stattier.config.search", PlayerSearchScreen::new)
+            };
+        }
+    }
 
-   public class ColorsTab extends ButtonTab<TierTaggerConfig> {
-      protected ColorsTab(final TTConfigScreen this$0) {
-         super("stattier.colors", this$0.manager);
-      }
+    public class ColorsTab extends ButtonTab<TierTaggerConfig> {
+        protected ColorsTab() {
+            super("stattier.colors", TTConfigScreen.this.manager);
+        }
 
-      protected WidgetCreator[] getWidgets(TierTaggerConfig config) {
-         Comparator<Entry<String, Integer>> comparator = Comparator.comparing((e) -> {
-            return ((String)e.getKey()).charAt(2);
-         });
-         comparator = comparator.thenComparing((e) -> {
-            return ((String)e.getKey()).charAt(0);
-         });
-         List<ColorOption> tiers = (List)config.getTierColors().entrySet().stream().sorted(comparator).map((e) -> {
-            return new ColorOption((String)e.getKey(), (Integer)e.getValue(), (val) -> {
-               config.getTierColors().put((String)e.getKey(), val);
-            });
-         }).collect(Collectors.toList());
-         int var10004 = config.getRetiredColor();
-         Objects.requireNonNull(config);
-         tiers.addLast(new ColorOption("stattier.colors.retired", var10004, config::setRetiredColor));
-         return (WidgetCreator[])tiers.toArray((x$0) -> {
-            return new WidgetCreator[x$0];
-         });
-      }
-   }
+        @Override
+        protected WidgetCreator[] getWidgets(TierTaggerConfig config) {
+            Comparator<Map.Entry<String, Integer>> comparator = Comparator.comparing(e -> e.getKey().charAt(2));
+            comparator = comparator.thenComparing(e -> e.getKey().charAt(0));
+
+            List<ColorOption> tiers = config.getTierColors().entrySet().stream()
+                    .sorted(comparator)
+                    .map(e -> new ColorOption(e.getKey(), e.getValue(), val -> config.getTierColors().put(e.getKey(), val)))
+                    .collect(Collectors.toList());
+
+            tiers.addLast(new ColorOption("stattier.colors.retired", config.getRetiredColor(), config::setRetiredColor));
+
+            return tiers.toArray(WidgetCreator[]::new);
+        }
+    }
 }
