@@ -1,0 +1,24 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MPL-2.0"
+
+[[mods]]
+modId = "stattier"
+version = "${version}"
+displayName = "StatTier"
+description = "Display player's PvP Tiers in their nametag!"
+authors = "urbruh122"
+
+[[dependencies.stattier]]
+modId = "neoforge"
+type = "required"
+versionRange = "[26.1,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.stattier]]
+modId = "minecraft"
+type = "required"
+versionRange = "[26.1,)"
+ordering = "NONE"
+side = "CLIENT"
