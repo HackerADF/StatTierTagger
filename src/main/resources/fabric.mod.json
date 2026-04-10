@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "stat-tier",
-  "version": "1.0.0+mc1.21",
+  "version": "${version}",
   "name": "StatTier",
   "description": "Display player's PvP Tiers in their nametag!",
   "authors": ["urbruh122"],
