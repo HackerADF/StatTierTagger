@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "stat-tier",
-  "version": "1.0.0+mc1.21",
+  "version": "${version}",
   "name": "StatTier",
   "description": "Display player's PvP Tiers in their nametag!",
   "authors": ["urbruh122"],
@@ -21,7 +21,7 @@
   ],
   "depends": {
     "fabricloader": ">=0.15",
-    "minecraft": ["1.21", "1.21.1"],
-    "ukulib": "^1.4.1"
+    "minecraft": ["1.21.2", "1.21.3"],
+    "ukulib": "^1.5.0"
   }
 }
