@@ -7,185 +7,206 @@ import dev.adf.stattier.model.GameMode;
 import dev.adf.stattier.model.PlayerInfo;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import java.net.http.HttpClient;
-import java.util.Map;
-import java.util.Optional;
+import lombok.Getter;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.class_124;
-import net.minecraft.class_2561;
-import net.minecraft.class_304;
-import net.minecraft.class_310;
-import net.minecraft.class_5250;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.uku3lig.ukulib.config.ConfigManager;
 import net.uku3lig.ukulib.utils.PlayerArgumentType;
 import net.uku3lig.ukulib.utils.Ukutils;
-import net.uku3lig.ukulib.utils.PlayerArgumentType.PlayerSelector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.http.HttpClient;
+import java.util.Map;
+import java.util.Optional;
+
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
+
 public class TierTagger implements ModInitializer {
-   public static final String MOD_ID = "stattier";
-   public static final Gson GSON = (new GsonBuilder()).create();
-   private static final ConfigManager<TierTaggerConfig> manager = ConfigManager.createDefault(TierTaggerConfig.class, "stattier");
-   private static final Logger logger = LoggerFactory.getLogger(TierTagger.class);
-   private static final HttpClient client = HttpClient.newHttpClient();
+    public static final String MOD_ID = "stattier";
+    public static final Gson GSON = new GsonBuilder().create();
 
-   public void onInitialize() {
-      TierCache.init();
-      ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) -> {
-         dispatcher.register((LiteralArgumentBuilder)ClientCommandManager.literal("stattier").then(ClientCommandManager.argument("player", PlayerArgumentType.player()).executes(TierTagger::displayTierInfo)));
-      });
-      Ukutils.registerKeybinding(new class_304("stattier.keybind.gamemode", -1, "stattier.name"), (mc) -> {
-         GameMode next = TierCache.findNextMode(((TierTaggerConfig)manager.getConfig()).getGameMode());
-         ((TierTaggerConfig)manager.getConfig()).setGameMode(next.id());
-         if (mc.field_1724 != null) {
-            class_2561 message = class_2561.method_43470("Displayed gamemode: ").method_10852(next.asStyled(false));
-            mc.field_1724.method_7353(message, true);
-         }
+    @Getter
+    private static final ConfigManager<TierTaggerConfig> manager = ConfigManager.createDefault(TierTaggerConfig.class, "stattier");
+    @Getter
+    private static final Logger logger = LoggerFactory.getLogger(TierTagger.class);
+    @Getter
+    private static final HttpClient client = HttpClient.newHttpClient();
 
-      });
-   }
+    @Override
+    public void onInitialize() {
+        TierCache.init();
 
-   public static class_2561 appendTier(String playerName, class_2561 text) {
-      class_5250 following = (class_5250)getPlayerTier(playerName).map((entry) -> {
-         class_2561 tierText = getRankingText(entry.ranking(), false);
-         return ((TierTaggerConfig)manager.getConfig()).isShowIcons() && entry.mode() != null && entry.mode().icon().isPresent() ? class_2561.method_43470(((Character)entry.mode().icon().get()).toString()).method_10852(tierText) : tierText.method_27661();
-      }).orElse(null);
-      if (following != null) {
-         following.method_10852(class_2561.method_43470(" | ").method_27692(class_124.field_1080));
-         return following.method_10852(text);
-      } else {
-         return text;
-      }
-   }
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) ->
+                dispatcher.register(literal("stattier")
+                        .then(argument("player", PlayerArgumentType.player())
+                                .executes(TierTagger::displayTierInfo))));
 
-   public static Optional<PlayerInfo.NamedRanking> getPlayerTier(String playerName) {
-      GameMode mode = ((TierTaggerConfig)manager.getConfig()).getGameMode();
-      return TierCache.getPlayerRankings(playerName).map((rankings) -> {
-         PlayerInfo.Ranking ranking = (PlayerInfo.Ranking)rankings.get(mode.id());
-         Optional<PlayerInfo.NamedRanking> highest = PlayerInfo.getHighestRanking(rankings);
-         TierTaggerConfig.HighestMode highestMode = ((TierTaggerConfig)manager.getConfig()).getHighestMode();
-         if (ranking == null) {
-            return highestMode != TierTaggerConfig.HighestMode.NEVER && highest.isPresent() ? (PlayerInfo.NamedRanking)highest.get() : null;
-         } else {
-            return highestMode == TierTaggerConfig.HighestMode.ALWAYS && highest.isPresent() ? (PlayerInfo.NamedRanking)highest.get() : ranking.asNamed(mode);
-         }
-      });
-   }
+        Ukutils.registerKeybinding(new KeyBinding("stattier.keybind.gamemode", -1, "stattier.name"),
+                mc -> {
+                    GameMode next = TierCache.findNextMode(manager.getConfig().getGameMode());
+                    manager.getConfig().setGameMode(next.id());
 
-   private static class_5250 getTierText(int tier, int pos, boolean retired) {
-      StringBuilder text = new StringBuilder();
-      if (retired) {
-         text.append("R");
-      }
+                    if (mc.player != null) {
+                        Text message = Text.literal("Displayed gamemode: ").append(next.asStyled(false));
+                        mc.player.sendMessage(message, true);
+                    }
+                });
+    }
 
-      text.append(pos == 0 ? "H" : "L").append("T").append(tier);
-      int color = getTierColor(text.toString());
-      return class_2561.method_43470(text.toString()).method_27694((s) -> {
-         return s.method_36139(color);
-      });
-   }
+    public static Text appendTier(String playerName, Text text) {
+        MutableText following = getPlayerTier(playerName)
+                .map(entry -> {
+                    Text tierText = getRankingText(entry.ranking(), false);
 
-   public static class_2561 getRankingText(PlayerInfo.Ranking ranking, boolean showPeak) {
-      if (ranking.retired() && ranking.peakTier() != null && ranking.peakPos() != null) {
-         return getTierText(ranking.peakTier(), ranking.peakPos(), true);
-      } else {
-         class_5250 tierText = getTierText(ranking.tier(), ranking.pos(), false);
-         if (showPeak && ranking.comparablePeak() < ranking.comparableTier()) {
-            tierText.method_10852(class_2561.method_43470(" (peak: ").method_27694((s) -> {
-               return s.method_10977(class_124.field_1080);
-            })).method_10852(getTierText(ranking.peakTier(), ranking.peakPos(), false)).method_10852(class_2561.method_43470(")").method_27694((s) -> {
-               return s.method_10977(class_124.field_1080);
-            }));
-         }
+                    if (manager.getConfig().isShowIcons() && entry.mode() != null && entry.mode().icon().isPresent()) {
+                        return Text.literal(entry.mode().icon().get().toString()).append(tierText);
+                    } else {
+                        return tierText.copy();
+                    }
+                })
+                .orElse(null);
 
-         return tierText;
-      }
-   }
+        if (following != null) {
+            following.append(Text.literal(" | ").formatted(Formatting.GRAY));
+            return following.append(text);
+        }
 
-   private static int displayTierInfo(CommandContext<FabricClientCommandSource> ctx) {
-      PlayerSelector selector = (PlayerSelector)ctx.getArgument("player", PlayerSelector.class);
-      String searchName = selector.name();
+        return text;
+    }
 
-      Optional<String> worldPlayerName = ((FabricClientCommandSource)ctx.getSource()).getWorld().method_18456().stream().filter((p) -> {
-         return p.method_5820().equalsIgnoreCase(searchName) || p.method_5845().equalsIgnoreCase(searchName);
-      }).findFirst().map((p) -> p.method_5820());
+    public static Optional<PlayerInfo.NamedRanking> getPlayerTier(String playerName) {
+        GameMode mode = manager.getConfig().getGameMode();
 
-      String lookupName = worldPlayerName.orElse(searchName);
-      Optional<Map<String, PlayerInfo.Ranking>> rankings = TierCache.getPlayerRankings(lookupName);
+        return TierCache.getPlayerRankings(playerName)
+                .map(rankings -> {
+                    PlayerInfo.Ranking ranking = rankings.get(mode.id());
+                    Optional<PlayerInfo.NamedRanking> highest = PlayerInfo.getHighestRanking(rankings);
+                    TierTaggerConfig.HighestMode highestMode = manager.getConfig().getHighestMode();
 
-      Optional<PlayerInfo> playerInfo = TierCache.getPlayerInfo(lookupName);
-      if (playerInfo.isPresent() && rankings.isPresent()) {
-         ((FabricClientCommandSource)ctx.getSource()).sendFeedback(printPlayerInfo(playerInfo.get()));
-      } else {
-         TierCache.searchPlayer(searchName).thenAccept((p) -> {
-            class_310.method_1551().execute(() -> {
-               if (p.rankings().isEmpty()) {
-                  ((FabricClientCommandSource)ctx.getSource()).sendError(class_2561.method_30163("Player not found."));
-               } else {
-                  ((FabricClientCommandSource)ctx.getSource()).sendFeedback(printPlayerInfo(p));
-               }
-            });
-         }).exceptionally((t) -> {
-            ((FabricClientCommandSource)ctx.getSource()).sendError(class_2561.method_30163("Player not found."));
-            return null;
-         });
-      }
+                    if (ranking == null) {
+                        if (highestMode != TierTaggerConfig.HighestMode.NEVER && highest.isPresent()) {
+                            return highest.get();
+                        } else {
+                            return null;
+                        }
+                    } else {
+                        if (highestMode == TierTaggerConfig.HighestMode.ALWAYS && highest.isPresent()) {
+                            return highest.get();
+                        } else {
+                            return ranking.asNamed(mode);
+                        }
+                    }
+                });
+    }
 
-      return 0;
-   }
+    private static MutableText getTierText(int tier, int pos, boolean retired) {
+        StringBuilder text = new StringBuilder();
+        if (retired) text.append("R");
+        text.append(pos == 0 ? "H" : "L").append("T").append(tier);
 
-   private static class_2561 printPlayerInfo(PlayerInfo info) {
-      if (info.rankings().isEmpty()) {
-         return class_2561.method_43470("Player not found.");
-      } else {
-         class_5250 text = class_2561.method_43473().method_27693("=== Rankings for " + info.name() + " ===");
-         PlayerInfo.PointInfo pointInfo = info.getPointInfo();
-         text.method_10852(class_2561.method_43470("\n" + pointInfo.getTitle()).method_27694((s) -> {
-            return s.method_36139(pointInfo.getColor());
-         })).method_10852(class_2561.method_43470(" (" + info.getTotalPoints() + " pts)").method_27692(class_124.field_1080));
-         int rank = TierCache.getPlayerRank(info.name());
-         if (rank > 0) {
-            int rankColor = getRankColor(rank);
-            text.method_10852(class_2561.method_43470("\nRank: ").method_27692(class_124.field_1080)).method_10852(class_2561.method_43470("#" + rank).method_27694((s) -> {
-               return s.method_36139(rankColor);
-            }));
-         }
-         info.rankings().forEach((m, r) -> {
-            if (m != null) {
-               GameMode mode = TierCache.findModeOrUgly(m);
-               class_2561 tierText = getRankingText(r, true);
-               text.method_10852(class_2561.method_43470("\n").method_10852(mode.asStyled(true)).method_27693(": ").method_10852(tierText));
+        int color = getTierColor(text.toString());
+        return Text.literal(text.toString()).styled(s -> s.withColor(color));
+    }
+
+    public static Text getRankingText(PlayerInfo.Ranking ranking, boolean showPeak) {
+        if (ranking.retired() && ranking.peakTier() != null && ranking.peakPos() != null) {
+            return getTierText(ranking.peakTier(), ranking.peakPos(), true);
+        } else {
+            MutableText tierText = getTierText(ranking.tier(), ranking.pos(), false);
+
+            if (showPeak && ranking.comparablePeak() < ranking.comparableTier()) {
+                tierText.append(Text.literal(" (peak: ").styled(s -> s.withColor(Formatting.GRAY)))
+                        .append(getTierText(ranking.peakTier(), ranking.peakPos(), false))
+                        .append(Text.literal(")").styled(s -> s.withColor(Formatting.GRAY)));
             }
-         });
-         return text;
-      }
-   }
 
-   public static int getRankColor(int rank) {
-      if (rank == 1) return 16763904;
-      if (rank <= 3) return 14329120;
-      if (rank <= 10) return 12632256;
-      if (rank <= 50) return 13467442;
-      return 5592405;
-   }
+            return tierText;
+        }
+    }
 
-   public static int getTierColor(String tier) {
-      return tier.startsWith("R") ? ((TierTaggerConfig)manager.getConfig()).getRetiredColor() : (Integer)((TierTaggerConfig)manager.getConfig()).getTierColors().getOrDefault(tier, 13882323);
-   }
+    private static int displayTierInfo(CommandContext<FabricClientCommandSource> ctx) {
+        PlayerArgumentType.PlayerSelector selector = ctx.getArgument("player", PlayerArgumentType.PlayerSelector.class);
+        String searchName = selector.name();
 
-public static ConfigManager<TierTaggerConfig> getManager() {
-      return manager;
-   }
+        Optional<String> worldPlayerName = ctx.getSource().getWorld().getPlayers().stream()
+                .filter(p -> p.getNameForScoreboard().equalsIgnoreCase(searchName) || p.getUuidAsString().equalsIgnoreCase(searchName))
+                .findFirst()
+                .map(p -> p.getNameForScoreboard());
 
-public static Logger getLogger() {
-      return logger;
-   }
+        String lookupName = worldPlayerName.orElse(searchName);
+        Optional<Map<String, PlayerInfo.Ranking>> rankings = TierCache.getPlayerRankings(lookupName);
+        Optional<PlayerInfo> playerInfo = TierCache.getPlayerInfo(lookupName);
 
-public static HttpClient getClient() {
-      return client;
-   }
+        if (playerInfo.isPresent() && rankings.isPresent()) {
+            ctx.getSource().sendFeedback(printPlayerInfo(playerInfo.get()));
+        } else {
+            TierCache.searchPlayer(searchName).thenAccept(p ->
+                    MinecraftClient.getInstance().execute(() -> {
+                        if (p.rankings().isEmpty()) {
+                            ctx.getSource().sendError(Text.of("Player not found."));
+                        } else {
+                            ctx.getSource().sendFeedback(printPlayerInfo(p));
+                        }
+                    })
+            ).exceptionally(t -> {
+                ctx.getSource().sendError(Text.of("Player not found."));
+                return null;
+            });
+        }
+
+        return 0;
+    }
+
+    private static Text printPlayerInfo(PlayerInfo info) {
+        if (info.rankings().isEmpty()) {
+            return Text.literal("Player not found.");
+        }
+
+        MutableText text = Text.empty().append("=== Rankings for " + info.name() + " ===");
+
+        PlayerInfo.PointInfo pointInfo = info.getPointInfo();
+        text.append(Text.literal("\n" + pointInfo.getTitle()).styled(s -> s.withColor(pointInfo.getColor())))
+                .append(Text.literal(" (" + info.getTotalPoints() + " pts)").formatted(Formatting.GRAY));
+
+        int rank = TierCache.getPlayerRank(info.name());
+        if (rank > 0) {
+            int rankColor = getRankColor(rank);
+            text.append(Text.literal("\nRank: ").formatted(Formatting.GRAY))
+                    .append(Text.literal("#" + rank).styled(s -> s.withColor(rankColor)));
+        }
+
+        info.rankings().forEach((m, r) -> {
+            if (m == null) return;
+            GameMode mode = TierCache.findModeOrUgly(m);
+            Text tierText = getRankingText(r, true);
+            text.append(Text.literal("\n").append(mode.asStyled(true)).append(": ").append(tierText));
+        });
+
+        return text;
+    }
+
+    public static int getRankColor(int rank) {
+        if (rank == 1) return 0xFFF300;
+        if (rank <= 3) return 0xDA9E20;
+        if (rank <= 10) return 0xC0C0C0;
+        if (rank <= 50) return 0xCD7F32;
+        return 0x555555;
+    }
+
+    public static int getTierColor(String tier) {
+        if (tier.startsWith("R")) {
+            return manager.getConfig().getRetiredColor();
+        } else {
+            return manager.getConfig().getTierColors().getOrDefault(tier, 0xD3D3D3);
+        }
+    }
 }
