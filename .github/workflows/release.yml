@@ -12,10 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Detect Java version from tag
+        id: java
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ "$tag" == *"+1.20" || "$tag" == *"+1.20.2" || "$tag" == *"+1.20.3" ]]; then
+            echo "version=17" >> "$GITHUB_OUTPUT"
+          elif [[ "$tag" == *"+26.1" ]]; then
+            echo "version=25" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=21" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK ${{ steps.java.outputs.version }}
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: ${{ steps.java.outputs.version }}
           distribution: 'temurin'
 
       - name: Setup Gradle
@@ -24,8 +36,13 @@ jobs:
       - name: Build
         run: chmod +x gradlew && ./gradlew build
 
+      - name: Collect jars
+        run: |
+          mkdir -p staging
+          find . -path '*/build/libs/*.jar' ! -name '*-dev.jar' ! -name '*-sources.jar' -exec cp {} staging/ \;
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/libs/*.jar
+          files: staging/*.jar
           generate_release_notes: true
