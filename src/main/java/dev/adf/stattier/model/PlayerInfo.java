@@ -1,202 +1,108 @@
 package dev.adf.stattier.model;
 
 import dev.adf.stattier.TierCache;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
 
-public record PlayerInfo(String discordId, String name, Map<String, PlayerInfo.Ranking> rankings, String region, boolean inServer) {
-   private static final Map<String, Integer> REGION_COLORS = Map.of("NA", 16738926, "EU", 7012206, "SA", 16750848, "AU", 16167531, "ME", 16767334, "AS", 12745632, "AF", 6770343);
+import java.util.*;
 
-   public PlayerInfo(String discordId, String name, Map<String, PlayerInfo.Ranking> rankings, String region, boolean inServer) {
-      this.discordId = discordId;
-      this.name = name;
-      this.rankings = rankings;
-      this.region = region;
-      this.inServer = inServer;
-   }
+public record PlayerInfo(String discordId, String name, Map<String, Ranking> rankings, String region, boolean inServer) {
+    private static final Map<String, Integer> REGION_COLORS = Map.of(
+            "NA", 0xff6a6e,
+            "EU", 0x6aff6e,
+            "SA", 0xff9900,
+            "AU", 0xf6b26b,
+            "ME", 0xffd966,
+            "AS", 0xc27ba0,
+            "AF", 0x674ea7
+    );
 
-   public int getTotalPoints() {
-      return this.rankings.values().stream().mapToInt(PlayerInfo.Ranking::getPoints).sum();
-   }
+    public int getTotalPoints() {
+        return this.rankings.values().stream().mapToInt(Ranking::getPoints).sum();
+    }
 
-   public PlayerInfo.PointInfo getPointInfo() {
-      int points = getTotalPoints();
-      if (points >= 400) return PointInfo.COMBAT_GRANDMASTER;
-      if (points >= 250) return PointInfo.COMBAT_MASTER;
-      if (points >= 100) return PointInfo.COMBAT_ACE;
-      if (points >= 50) return PointInfo.COMBAT_SPECIALIST;
-      if (points >= 20) return PointInfo.COMBAT_CADET;
-      if (points >= 10) return PointInfo.COMBAT_NOVICE;
-      return PointInfo.ROOKIE;
-   }
+    public PointInfo getPointInfo() {
+        int points = getTotalPoints();
+        if (points >= 400) return PointInfo.COMBAT_GRANDMASTER;
+        if (points >= 250) return PointInfo.COMBAT_MASTER;
+        if (points >= 100) return PointInfo.COMBAT_ACE;
+        if (points >= 50) return PointInfo.COMBAT_SPECIALIST;
+        if (points >= 20) return PointInfo.COMBAT_CADET;
+        if (points >= 10) return PointInfo.COMBAT_NOVICE;
+        return PointInfo.ROOKIE;
+    }
 
-   public int getRegionColor() {
-      return (Integer)REGION_COLORS.getOrDefault(this.region.toUpperCase(Locale.ROOT), 16777215);
-   }
+    public int getRegionColor() {
+        return REGION_COLORS.getOrDefault(this.region.toUpperCase(Locale.ROOT), 0xffffff);
+    }
 
-   public static Optional<PlayerInfo.NamedRanking> getHighestRanking(Map<String, PlayerInfo.Ranking> rankings) {
-      return rankings.entrySet().stream().filter((e) -> {
-         return e.getKey() != null;
-      }).min(Comparator.comparingInt((e) -> {
-         return ((PlayerInfo.Ranking)e.getValue()).comparableTier();
-      })).map((e) -> {
-         return ((PlayerInfo.Ranking)e.getValue()).asNamed(TierCache.findModeOrUgly((String)e.getKey()));
-      });
-   }
+    public static Optional<NamedRanking> getHighestRanking(Map<String, Ranking> rankings) {
+        return rankings.entrySet().stream()
+                .filter(e -> e.getKey() != null)
+                .min(Comparator.comparingInt(e -> e.getValue().comparableTier()))
+                .map(e -> e.getValue().asNamed(TierCache.findModeOrUgly(e.getKey())));
+    }
 
-   public List<PlayerInfo.NamedRanking> getSortedTiers() {
-      List<PlayerInfo.NamedRanking> tiers = new ArrayList(this.rankings.entrySet().stream().map((e) -> {
-         return ((PlayerInfo.Ranking)e.getValue()).asNamed(TierCache.findModeOrUgly((String)e.getKey()));
-      }).toList());
-      tiers.sort(Comparator.comparing((PlayerInfo.NamedRanking a) -> {
-         return a.ranking().retired();
-      }, Boolean::compare).thenComparingInt((PlayerInfo.NamedRanking a) -> {
-         return a.ranking().tier();
-      }).thenComparingInt((PlayerInfo.NamedRanking a) -> {
-         return a.ranking().pos();
-      }));
-      return tiers;
-   }
+    public List<NamedRanking> getSortedTiers() {
+        List<NamedRanking> tiers = new ArrayList<>(this.rankings.entrySet().stream()
+                .map(e -> e.getValue().asNamed(TierCache.findModeOrUgly(e.getKey())))
+                .toList());
 
-   public String discordId() {
-      return this.discordId;
-   }
+        tiers.sort(Comparator.comparing((NamedRanking a) -> a.ranking.retired, Boolean::compare)
+                .thenComparingInt(a -> a.ranking.tier)
+                .thenComparingInt(a -> a.ranking.pos));
 
-   public String name() {
-      return this.name;
-   }
+        return tiers;
+    }
 
-   public Map<String, PlayerInfo.Ranking> rankings() {
-      return this.rankings;
-   }
+    public record NamedRanking(@Nullable GameMode mode, Ranking ranking) {
+    }
 
-   public String region() {
-      return this.region;
-   }
+    public record Ranking(int tier, int pos, @Nullable Integer peakTier, @Nullable Integer peakPos, long attained, boolean retired) {
+        public int comparableTier() {
+            return tier * 2 + pos;
+        }
 
-   public boolean inServer() {
-      return this.inServer;
-   }
+        public int comparablePeak() {
+            if (peakTier == null || peakPos == null) {
+                return Integer.MAX_VALUE;
+            } else {
+                return peakTier * 2 + peakPos;
+            }
+        }
 
-   public static record NamedRanking(@Nullable GameMode mode, PlayerInfo.Ranking ranking) {
-      public NamedRanking(@Nullable GameMode mode, PlayerInfo.Ranking ranking) {
-         this.mode = mode;
-         this.ranking = ranking;
-      }
+        public NamedRanking asNamed(GameMode mode) {
+            return new NamedRanking(mode, this);
+        }
 
-      @Nullable
-      public GameMode mode() {
-         return this.mode;
-      }
+        public int getPoints() {
+            return switch (this.tier) {
+                case 1 -> this.pos == 0 ? 60 : 45;
+                case 2 -> this.pos == 0 ? 30 : 20;
+                case 3 -> this.pos == 0 ? 10 : 6;
+                case 4 -> this.pos == 0 ? 4 : 3;
+                case 5 -> this.pos == 0 ? 2 : 1;
+                default -> 0;
+            };
+        }
+    }
 
-      public PlayerInfo.Ranking ranking() {
-         return this.ranking;
-      }
-   }
+    @Getter
+    @AllArgsConstructor
+    public enum PointInfo {
+        COMBAT_GRANDMASTER("\u265A Combat Grandmaster", 0xFE1617),
+        COMBAT_MASTER("Combat Master", 0xFE1617),
+        COMBAT_ACE("Combat Ace", 0xFD8F4F),
+        COMBAT_SPECIALIST("Combat Specialist", 0xD8BA7E),
+        COMBAT_CADET("Combat Cadet", 0xC4B1BD),
+        COMBAT_NOVICE("Combat Novice", 0xC4B1BD),
+        ROOKIE("Rookie", 0xAAAAAA);
 
-   public static record Ranking(int tier, int pos, @Nullable Integer peakTier, @Nullable Integer peakPos, long attained, boolean retired) {
-      public Ranking(int tier, int pos, @Nullable Integer peakTier, @Nullable Integer peakPos, long attained, boolean retired) {
-         this.tier = tier;
-         this.pos = pos;
-         this.peakTier = peakTier;
-         this.peakPos = peakPos;
-         this.attained = attained;
-         this.retired = retired;
-      }
+        private final String title;
+        private final int color;
+    }
 
-      public int comparableTier() {
-         return this.tier * 2 + this.pos;
-      }
-
-      public int comparablePeak() {
-         return this.peakTier != null && this.peakPos != null ? this.peakTier * 2 + this.peakPos : Integer.MAX_VALUE;
-      }
-
-      public PlayerInfo.NamedRanking asNamed(GameMode mode) {
-         return new PlayerInfo.NamedRanking(mode, this);
-      }
-
-      public int tier() {
-         return this.tier;
-      }
-
-      public int pos() {
-         return this.pos;
-      }
-
-      @Nullable
-      public Integer peakTier() {
-         return this.peakTier;
-      }
-
-      @Nullable
-      public Integer peakPos() {
-         return this.peakPos;
-      }
-
-      public long attained() {
-         return this.attained;
-      }
-
-      public boolean retired() {
-         return this.retired;
-      }
-
-      public int getPoints() {
-         switch (this.tier) {
-            case 1: return this.pos == 0 ? 60 : 45;
-            case 2: return this.pos == 0 ? 30 : 20;
-            case 3: return this.pos == 0 ? 10 : 6;
-            case 4: return this.pos == 0 ? 4 : 3;
-            case 5: return this.pos == 0 ? 2 : 1;
-            default: return 0;
-         }
-      }
-   }
-
-   public static enum PointInfo {
-      COMBAT_GRANDMASTER("\u265A Combat Grandmaster", 16638023),
-      COMBAT_MASTER("Combat Master", 16638023),
-      COMBAT_ACE("Combat Ace", 16622767),
-      COMBAT_SPECIALIST("Combat Specialist", 14202110),
-      COMBAT_CADET("Combat Cadet", 12891645),
-      COMBAT_NOVICE("Combat Novice", 12891645),
-      ROOKIE("Rookie", 11184810);
-
-      private final String title;
-      private final int color;
-
-      public String getTitle() {
-         return this.title;
-      }
-
-      public int getColor() {
-         return this.color;
-      }
-
-      private PointInfo(final String title, final int color) {
-         this.title = title;
-         this.color = color;
-      }
-   }
-
-   public static record Badge(String title, String desc) {
-      public Badge(String title, String desc) {
-         this.title = title;
-         this.desc = desc;
-      }
-
-      public String title() {
-         return this.title;
-      }
-
-      public String desc() {
-         return this.desc;
-      }
-   }
+    public record Badge(String title, String desc) {
+    }
 }

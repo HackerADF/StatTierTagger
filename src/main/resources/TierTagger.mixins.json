@@ -7,8 +7,6 @@
     "MixinPlayerEntity"
   ],
   "client": [
-    "MinecraftClientAccessor",
-    "MixinPlayerListHud",
     "MixinTitleScreen"
   ],
   "injectors": {
