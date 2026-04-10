@@ -1,25 +1,21 @@
 package dev.adf.stattier.mixin;
 
 import dev.adf.stattier.TierTagger;
-import dev.adf.stattier.config.TierTaggerConfig;
-import com.llamalad7.mixinextras.injector.ModifyReturnValue;
-import net.minecraft.class_1657;
-import net.minecraft.class_2561;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin({class_1657.class})
+@Mixin(PlayerEntity.class)
 public class MixinPlayerEntity {
-   @ModifyReturnValue(
-      method = {"method_5476"},
-      at = {@At("RETURN")}
-   )
-   public class_2561 prependTier(class_2561 original) {
-      if (((TierTaggerConfig)TierTagger.getManager().getConfig()).isEnabled()) {
-         class_1657 self = (class_1657)(Object)this;
-         return TierTagger.appendTier(self.method_5820(), original);
-      } else {
-         return original;
-      }
-   }
+    @Inject(method = "getDisplayName", at = @At("RETURN"), cancellable = true)
+    public void prependTier(CallbackInfoReturnable<Text> cir) {
+        if (TierTagger.getManager().getConfig().isEnabled()) {
+            PlayerEntity self = (PlayerEntity) (Object) this;
+            Text modified = TierTagger.appendTier(self.getNameForScoreboard(), cir.getReturnValue());
+            cir.setReturnValue(modified);
+        }
+    }
 }

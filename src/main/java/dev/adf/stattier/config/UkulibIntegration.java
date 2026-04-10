@@ -1,11 +1,13 @@
 package dev.adf.stattier.config;
 
-import java.util.function.UnaryOperator;
-import net.minecraft.class_437;
+import net.minecraft.client.gui.screen.Screen;
 import net.uku3lig.ukulib.api.UkulibAPI;
 
+import java.util.function.UnaryOperator;
+
 public class UkulibIntegration implements UkulibAPI {
-   public UnaryOperator<class_437> supplyConfigScreen() {
-      return TTConfigScreen::new;
-   }
+    @Override
+    public UnaryOperator<Screen> supplyConfigScreen() {
+        return TTConfigScreen::new;
+    }
 }
